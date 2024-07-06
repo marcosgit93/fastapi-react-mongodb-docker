@@ -1,16 +1,25 @@
-version: '3'
-
 services:
-  proxy:
+  - name: proxy
+    type: web
+    env: docker
+    plan: free
+    dockerfilePath: ''
     image: traefik:v2.9
     networks:
       - traefik-public
       - default
+    envVars:
+      - key: TRAEFIK_PUBLIC_NETWORK
+        value: ${TRAEFIK_PUBLIC_NETWORK}
     ports:
-      - "80:80"
-      - "8090:8080"
+      - port: 80
+        hostPort: 80
+      - port: 8090
+        hostPort: 8080
     volumes:
-      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - path: /var/run/docker.sock
+        mountPath: /var/run/docker.sock
+        readOnly: true
     command:
       - --providers.docker
       - --providers.docker.exposedbydefault=false
@@ -20,34 +29,74 @@ services:
       - --api.insecure=true
       - --entrypoints.web.address=:80
     labels:
-      traefik.enable: "true"
-      traefik.docker.network: traefik-public
+      - traefik.enable=true
+      - traefik.docker.network=${TRAEFIK_PUBLIC_NETWORK}
 
-  db:
+  - name: db
+    type: database
+    env: docker
+    plan: free
     image: mongo:latest
     volumes:
-      - app-db-data:/data/db
+      - path: app-db-data
+        mountPath: /data/db
+    envVars:
+      - key: MONGO_INITDB_DATABASE
+        value: ${MONGO_DB}
+      - key: MONGO_INITDB_ROOT_USERNAME
+        value: ${MONGO_USER}
+      - key: MONGO_INITDB_ROOT_PASSWORD
+        value: ${MONGO_PASSWORD}
     ports:
-      - "${MONGO_PORT}:${MONGO_PORT}"
-    environment:
-      MONGO_INITDB_DATABASE: ${MONGO_DB}
-      MONGO_INITDB_ROOT_USERNAME: ${MONGO_USER}
-      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD}
+      - port: ${MONGO_PORT}
+        hostPort: ${MONGO_PORT}
 
-  backend:
-    image: ${DOCKER_IMAGE_BACKEND}:${TAG-latest}
-    depends_on:
+  - name: backend
+    type: web
+    env: docker
+    plan: free
+    buildCommand: docker build -t ${DOCKER_IMAGE_BACKEND}:${TAG-latest} ./backend
+    startCommand: /start-reload.sh
+    dockerfilePath: backend/Dockerfile
+    dependsOn:
       - db
     volumes:
-      - ./backend:/app
+      - path: ./backend
+        mountPath: /app
+    envVars:
+      - key: SERVER_HOST
+        value: http://${DOMAIN}
     ports:
-      - "8888:8888"
-    environment:
-      SERVER_HOST: http://${DOMAIN}
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-      args:
-        INSTALL_DEV: ${INSTALL_DEV}
-    command: /start-reload.sh
-   
+      - port: 8888
+        hostPort: 8888
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.${STACK_NAME}-backend-http.rule=PathPrefix(`/api`) || PathPrefix(`/docs`) || PathPrefix(`/redoc`)
+      - traefik.http.services.${STACK_NAME}-backend.loadbalancer.server.port=80
+
+  - name: frontend
+    type: web
+    env: docker
+    plan: free
+    buildCommand: docker build -t ${DOCKER_IMAGE_FRONTEND}:${TAG-latest} ./frontend
+    startCommand: npm run dev -- --host
+    dockerfilePath: frontend/Dockerfile.development
+    volumes:
+      - path: ./frontend
+        mountPath: /app
+      - path: /app/node_modules
+        mountPath: /app/node_modules
+    ports:
+      - port: 5173
+        hostPort: 5173
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.${STACK_NAME}-frontend-http.rule=PathPrefix(`/`)
+      - traefik.http.services.${STACK_NAME}-frontend.loadbalancer.server.port=5173
+
+volumes:
+  - name: app-db-data
+
+networks:
+  - name: traefik-public
+    external: false
