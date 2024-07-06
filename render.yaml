@@ -60,7 +60,7 @@ services:
       - key: traefik.enable
         value: "true"
       - key: traefik.http.routers.${STACK_NAME}-backend-http.rule
-        value: PathPrefix(`/api`) || PathPrefix(`/docs`) || PathPrefix(`/redoc`)
+        value: "PathPrefix(`/api`) || PathPrefix(`/docs`) || PathPrefix(`/redoc`)"
       - key: traefik.http.services.${STACK_NAME}-backend.loadbalancer.server.port
         value: "80"
 
@@ -80,7 +80,7 @@ services:
       - key: traefik.enable
         value: "true"
       - key: traefik.http.routers.${STACK_NAME}-frontend-http.rule
-        value: PathPrefix(`/`)
+        value: "PathPrefix(`/`)"
       - key: traefik.http.services.${STACK_NAME}-frontend.loadbalancer.server.port
         value: "5173"
 
