@@ -3,18 +3,15 @@ services:
     type: web
     env: docker
     plan: free
-    dockerCommand: |
-      traefik:v2.9 \
-      --providers.docker \
-      --providers.docker.exposedbydefault=false \
-      --accesslog \
-      --log \
-      --api \
-      --api.insecure=true \
-      --entrypoints.web.address=:80
-    ports:
-      - port: 80
-      - port: 8090
+    dockerCommand: traefik:v2.9
+    dockerArgs:
+      - --providers.docker
+      - --providers.docker.exposedbydefault=false
+      - --accesslog
+      - --log
+      - --api
+      - --api.insecure=true
+      - --entrypoints.web.address=:80
     volumes:
       - path: /var/run/docker.sock
         mountPath: /var/run/docker.sock
@@ -32,11 +29,9 @@ services:
     type: web
     env: docker
     plan: free
-    dockerfilePath: ''
-    dockerCommand: |
-      mongo:latest
+    dockerCommand: mongo:latest
     volumes:
-      - path: app-db-data
+      - path: /data/db
         mountPath: /data/db
     envVars:
       - key: MONGO_INITDB_DATABASE
@@ -45,14 +40,12 @@ services:
         value: ${MONGO_USER}
       - key: MONGO_INITDB_ROOT_PASSWORD
         value: ${MONGO_PASSWORD}
-    ports:
-      - port: ${MONGO_PORT}
 
   - name: backend
     type: web
     env: docker
     plan: free
-    dockerfilePath: backend/Dockerfile
+    dockerfilePath: ./backend/Dockerfile
     buildCommand: docker build -t ${DOCKER_IMAGE_BACKEND}:${TAG-latest} ./backend
     startCommand: /start-reload.sh
     dependsOn:
@@ -63,8 +56,6 @@ services:
     envVars:
       - key: SERVER_HOST
         value: http://${DOMAIN}
-    ports:
-      - port: 8888
     labels:
       - key: traefik.enable
         value: "true"
@@ -77,7 +68,7 @@ services:
     type: web
     env: docker
     plan: free
-    dockerfilePath: frontend/Dockerfile.development
+    dockerfilePath: ./frontend/Dockerfile.development
     buildCommand: docker build -t ${DOCKER_IMAGE_FRONTEND}:${TAG-latest} ./frontend
     startCommand: npm run dev -- --host
     volumes:
@@ -85,8 +76,6 @@ services:
         mountPath: /app
       - path: /app/node_modules
         mountPath: /app/node_modules
-    ports:
-      - port: 5173
     labels:
       - key: traefik.enable
         value: "true"
