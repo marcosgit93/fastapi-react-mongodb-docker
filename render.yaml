@@ -32,24 +32,6 @@ services:
       - traefik.enable=true
       - traefik.docker.network=${TRAEFIK_PUBLIC_NETWORK}
 
-  - name: db
-    env: docker
-    plan: free
-    image: mongo:latest
-    volumes:
-      - path: app-db-data
-        mountPath: /data/db
-    envVars:
-      - key: MONGO_INITDB_DATABASE
-        value: ${MONGO_DB}
-      - key: MONGO_INITDB_ROOT_USERNAME
-        value: ${MONGO_USER}
-      - key: MONGO_INITDB_ROOT_PASSWORD
-        value: ${MONGO_PASSWORD}
-    ports:
-      - port: ${MONGO_PORT}
-        hostPort: ${MONGO_PORT}
-
   - name: backend
     type: web
     env: docker
