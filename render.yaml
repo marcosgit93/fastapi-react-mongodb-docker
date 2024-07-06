@@ -4,7 +4,7 @@ services:
     env: docker
     plan: free
     dockerImage: traefik:v2.9
-    dockerCommand: 
+    dockerCommand:
       - "--providers.docker"
       - "--providers.docker.exposedbydefault=false"
       - "--accesslog"
@@ -26,7 +26,7 @@ services:
         value: ${TRAEFIK_PUBLIC_NETWORK}
 
   - name: db
-    type: worker # Render.com não suporta tipo `database`. Utilize `worker` ou `cron`
+    type: worker
     env: docker
     plan: free
     dockerImage: mongo:latest
