@@ -3,15 +3,15 @@ services:
     type: web
     env: docker
     plan: free
-    dockerCommand: traefik:v2.9
-    dockerArgs:
-      - --providers.docker
-      - --providers.docker.exposedbydefault=false
-      - --accesslog
-      - --log
-      - --api
-      - --api.insecure=true
-      - --entrypoints.web.address=:80
+    dockerImage: traefik:v2.9
+    dockerCommand: 
+      - "--providers.docker"
+      - "--providers.docker.exposedbydefault=false"
+      - "--accesslog"
+      - "--log"
+      - "--api"
+      - "--api.insecure=true"
+      - "--entrypoints.web.address=:80"
     volumes:
       - path: /var/run/docker.sock
         mountPath: /var/run/docker.sock
@@ -26,10 +26,10 @@ services:
         value: ${TRAEFIK_PUBLIC_NETWORK}
 
   - name: db
-    type: web
+    type: worker # Render.com não suporta tipo `database`. Utilize `worker` ou `cron`
     env: docker
     plan: free
-    dockerCommand: mongo:latest
+    dockerImage: mongo:latest
     volumes:
       - path: /data/db
         mountPath: /data/db
@@ -46,7 +46,7 @@ services:
     env: docker
     plan: free
     dockerfilePath: ./backend/Dockerfile
-    buildCommand: docker build -t ${DOCKER_IMAGE_BACKEND}:${TAG-latest} ./backend
+    buildCommand: docker build -t ${DOCKER_IMAGE_BACKEND}:${TAG} ./backend
     startCommand: /start-reload.sh
     dependsOn:
       - name: db
@@ -69,7 +69,7 @@ services:
     env: docker
     plan: free
     dockerfilePath: ./frontend/Dockerfile.development
-    buildCommand: docker build -t ${DOCKER_IMAGE_FRONTEND}:${TAG-latest} ./frontend
+    buildCommand: docker build -t ${DOCKER_IMAGE_FRONTEND}:${TAG} ./frontend
     startCommand: npm run dev -- --host
     volumes:
       - path: ./frontend
